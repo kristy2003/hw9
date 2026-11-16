@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小說推薦網 - 精選玄幻、言情、都市、穿越小說閱讀與推薦</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-50 text-gray-800 antialiased">
+
+  <!-- 頂部導覽列 -->
+  <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+      <button onclick="navigateTo('home')" class="flex items-center gap-2 shrink-0 text-left cursor-pointer">
+        <span class="bg-amber-600 text-white font-black px-2.5 py-1 rounded text-lg tracking-wider">書狂</span>
+        <div class="flex flex-col">
+          <span class="font-bold text-gray-900 text-lg leading-none">小說推薦網</span>
+          <span class="text-[11px] text-gray-400 tracking-tight mt-0.5">NOVEL HUB</span>
+        </div>
+      </button>
+
+      <form onsubmit="handleSearch(event)" class="flex-1 max-w-md flex items-center">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="搜尋書名、作者、標籤..."
+          class="w-full h-9 px-3 text-sm bg-gray-50 border border-gray-300 rounded-l focus:outline-none focus:border-amber-500 focus:bg-white transition-colors"
+        />
+        <button
+          type="submit"
+          class="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-r shrink-0 transition-colors cursor-pointer"
+        >
+          搜尋
+        </button>
+      </form>
+
+      <div class="flex items-center gap-3 shrink-0 text-sm">
+        <button
+          onclick="navigateTo('bookshelf')"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded border border-gray-200 transition-colors cursor-pointer"
+        >
+          <span>我的書架</span>
+          <span id="shelfCountBadge" class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="bg-zinc-800 text-zinc-200 text-sm">
+      <div id="categoryNav" class="max-w-6xl mx-auto px-4 flex items-center overflow-x-auto no-scrollbar"></div>
+    </nav>
+  </header>
+
+  <!-- 主內容區 -->
+  <main id="appMain" class="flex-1 max-w-6xl w-full mx-auto px-4 py-6"></main>
+
+  <!-- 頁尾 -->
+  <footer class="bg-white border-t border-gray-200 mt-12 py-6 text-center text-xs text-gray-500">
+    <div class="max-w-6xl mx-auto px-4 space-y-1">
+      <p>小說推薦網 © 2026 All Rights Reserved.</p>
+      <p>本站僅提供小說推薦索引與閱讀介面展示，所有作品版權歸原作者與原出版社所有。</p>
+    </div>
+  </footer>
+
+  <script>
+    const CATEGORIES = [
+      '玄幻魔法', '武俠修真', '都市言情', '歷史軍事',
+      '遊戲競技', '科幻靈異', '同人小說', '輕小說'
+    ];
+
+    const MOCK_NOVELS = [
+      {
+        id: 'novel-001',
+        title: '星辰變奏曲：從零開始的御獸師',
+        author: '夜風微涼',
+        category: '玄幻魔法',
+        tags: ['系統流', '御獸', '熱血', '輕鬆'],
+        description: '靈氣復甦時代，每個人在十八歲都能覺醒本命獸魂。林默意外獲得古老圖鑑系統，不僅能看見魔獸隱藏的進化路線，還能將看似廢柴的史萊姆培養成吞噬星空的遠古巨獸……',
+        status: 'ongoing',
+        wordCount: 1450000,
+        views: 892300,
+        recommendScore: 9.4,
+        updatedAt: '11-16 21:30',
+        latestChapter: { id: 'ch-412', index: 412, title: '第412章 深淵龍巢的秘密', updatedAt: '2小時前' }
+      },
+      {
+        id: 'novel-002',
+        title: '重回1998：我的科技商業帝國',
+        author: '江南煙雨客',
+        category: '都市言情',
+        tags: ['重生', '商戰', '日常', '單女主'],
+        description: '一場意外讓資深工程師陳遠重回1998年的夏天。站在網際網路浪潮的前夕，他決定彌補前世遺憾，從一間小小的電腦組裝店起步，打造橫跨軟硬體的科技巨頭。',
+        status: 'completed',
+        wordCount: 2380000,
+        views: 1540000,
+        recommendScore: 9.6,
+        updatedAt: '11-16 20:15',
+        latestChapter: { id: 'ch-680', index: 680, title: '第680章 星辰大海（大結局）', updatedAt: '3小時前' }
+      },
+      {
+        id: 'novel-003',
+        title: '大明風華：開局替朱元璋守國門',
+        author: '青衫史官',
+        category: '歷史軍事',
+        tags: ['穿越', '明朝', '權謀', '基建'],
+        description: '現代歷史系研究生穿越洪武年間，成為邊關一名小小百戶。面對北元鐵騎壓境，他憑藉超前的火器改良與後勤制度，硬生生在漠北築起一道鋼鐵長城。',
+        status: 'ongoing',
+        wordCount: 1820000,
+        views: 1120000,
+        recommendScore: 9.2,
+        updatedAt: '11-16 19:45',
+        latestChapter: { id: 'ch-519', index: 519, title: '第519章 封狼居胥，勒石燕然', updatedAt: '4小時前' }
+      },
+      {
+        id: 'novel-004',
+        title: '全職法師之雷霆主宰',
+        author: '踏雪無痕',
+        category: '玄幻魔法',
+        tags: ['魔法', '學院', '天才流'],
+        description: '覺醒儀式上，別人只有單系天賦，他卻同時點亮了毀滅性最強的雷系與空間系！從學府大比到世界妖魔戰場，他以雷霆之威鎮壓一切不服。',
+        status: 'ongoing',
+        wordCount: 980000,
+        views: 640000,
+        recommendScore: 8.9,
+        updatedAt: '11-16 18:20',
+        latestChapter: { id: 'ch-295', index: 295, title: '第295章 九霄神雷降世', updatedAt: '5小時前' }
+      },
+      {
+        id: 'novel-005',
+        title: '深空彼岸：星艦維修工的逆襲',
+        author: '零號機甲',
+        category: '科幻靈異',
+        tags: ['星際', '機甲', '硬核科幻'],
+        description: '星歷3042年，人類艦隊在獵戶座旋臂遭遇神秘矽基文明。一名邊緣空間站的維修技師，意外修復了上古曲率引擎，揭開宇宙黑暗森林的真相。',
+        status: 'ongoing',
+        wordCount: 1120000,
+        views: 530000,
+        recommendScore: 9.1,
+        updatedAt: '11-16 17:10',
+        latestChapter: { id: 'ch-340', index: 340, title: '第340章 躍遷座標：半人馬座', updatedAt: '6小時前' }
+      },
+      {
+        id: 'novel-006',
+        title: '網遊之神級刺客',
+        author: '影舞者',
+        category: '遊戲競技',
+        tags: ['虛擬網遊', '電競', '操作流'],
+        description: '全息網遊《神域》開服，前世巔峰刺客帶著十年遊戲記憶重生，開局奪取唯一隱藏職業「暗影君王」，在無數公會圍剿中登頂世界之巔。',
+        status: 'completed',
+        wordCount: 3100000,
+        views: 2150000,
+        recommendScore: 9.5,
+        updatedAt: '11-16 15:00',
+        latestChapter: { id: 'ch-890', index: 890, title: '第890章 諸神黃昏，加冕為王', updatedAt: '8小時前' }
+      }
+    ];
+
+    // 安全讀取本機儲存，避免 file:// 協議下的權限報錯
+    function safeGetStorage(key, fallback) {
+      try {
+        const val = localStorage.getItem(key);
+        return val !== null ? val : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function safeSetStorage(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {}
+    }
+
+    let state = {
+      view: 'home',
+      selectedCategory: '',
+      searchQuery: '',
+      bookId: '',
+      chapterIndex: 1,
+      catalogReversed: false,
+      readerTheme: safeGetStorage('reader_theme', 'sepia'),
+      readerFontSize: Number(safeGetStorage('reader_font_size', '18')) || 18,
+      bookshelf: JSON.parse(safeGetStorage('novel_bookshelf', '[]'))
+    };
+
+    function navigateTo(view, params = {}) {
+      state = { ...state, view, ...params };
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      renderNavbar();
+      renderApp();
+    }
+
+    function handleSearch(e) {
+      e.preventDefault();
+      const q = document.getElementById('searchInput').value.trim();
+      if (!q) return navigateTo('home');
+      navigateTo('search', { searchQuery: q });
+    }
+
+    function toggleBookshelf(bookId) {
+      if (state.bookshelf.includes(bookId)) {
+        state.bookshelf = state.bookshelf.filter(id => id !== bookId);
+      } else {
+        state.bookshelf.push(bookId);
+      }
+      safeSetStorage('novel_bookshelf', JSON.stringify(state.bookshelf));
+      updateShelfBadge();
+      renderApp();
+    }
+
+    function updateShelfBadge() {
+      const badge = document.getElementById('shelfCountBadge');
+      if (badge) badge.textContent = state.bookshelf.length;
+    }
+
+    function renderNavbar() {
+      const nav = document.getElementById('categoryNav');
+      let html = `
+        <button onclick="navigateTo('home')" class="px-3.5 py-2.5 shrink-0 font-medium transition-colors cursor-pointer ${
+          state.view === 'home' ? 'bg-amber-600 text-white' : 'hover:bg-zinc-700 hover:text-white'
+        }">首頁</button>
+      `;
+
+      CATEGORIES.forEach(cat => {
+        const active = state.view === 'category' && state.selectedCategory === cat;
+        html += `
+          <button onclick="navigateTo('category', { selectedCategory: '${cat}' })" class="px-3.5 py-2.5 shrink-0 transition-colors cursor-pointer ${
+            active ? 'bg-amber-600 text-white font-medium' : 'hover:bg-zinc-700 hover:text-white'
+          }">${cat}</button>
+        `;
+      });
+
+      html += `
+        <div class="h-4 w-[1px] bg-zinc-600 mx-1 shrink-0"></div>
+        <button onclick="navigateTo('rank')" class="px-3.5 py-2.5 shrink-0 transition-colors cursor-pointer ${
+          state.view === 'rank' ? 'bg-amber-600 text-white font-medium' : 'text-amber-400 hover:bg-zinc-700'
+        }">排行榜</button>
+        <button onclick="navigateTo('completed')" class="px-3.5 py-2.5 shrink-0 transition-colors cursor-pointer ${
+          state.view === 'completed' ? 'bg-amber-600 text-white font-medium' : 'hover:bg-zinc-700 hover:text-white'
+        }">全本完本</button>
+      `;
+      nav.innerHTML = html;
+      updateShelfBadge();
+    }
+
+    function renderBookCardHTML(novel) {
+      const isCompleted = novel.status === 'completed';
+      return `
+        <div class="flex gap-3 p-3 bg-white border border-gray-200 rounded hover:border-amber-500 transition-colors">
+          <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="shrink-0 cursor-pointer">
+            <div class="w-24 h-32 bg-gradient-to-br from-zinc-700 to-zinc-900 text-white rounded overflow-hidden border border-gray-200 flex flex-col items-center justify-center p-2 text-center">
+              <span class="text-[10px] text-amber-400 mb-1">${novel.category}</span>
+              <span class="text-xs font-bold line-clamp-2 leading-tight">${novel.title}</span>
+            </div>
+          </button>
+          <div class="flex flex-col justify-between flex-1 min-w-0">
+            <div>
+              <div class="flex items-center justify-between gap-2">
+                <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="font-bold text-gray-900 hover:text-amber-600 truncate text-base text-left cursor-pointer">
+                  ${novel.title}
+                </button>
+                <span class="shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${
+                  isCompleted ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                }">
+                  ${isCompleted ? '已完結' : '連載中'}
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-1.5 text-xs text-gray-500 mt-1">
+                <span>作者：${novel.author}</span>
+                <span>|</span>
+                <span class="text-amber-600 font-semibold">推薦 ${novel.recommendScore} 分</span>
+              </div>
+              <p class="text-xs text-gray-600 line-clamp-2 mt-1.5 leading-relaxed">${novel.description}</p>
+            </div>
+            <div class="flex items-center justify-between text-xs mt-2 pt-1.5 border-t border-gray-100 gap-2">
+              <div class="flex gap-1 overflow-hidden shrink-0">
+                ${novel.tags.slice(0, 2).map(t => `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">#${t}</span>`).join('')}
+              </div>
+              <button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${novel.latestChapter.index} })" class="text-gray-500 hover:text-amber-600 truncate cursor-pointer">
+                最新：${novel.latestChapter.title}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderHomeView() {
+      const featured = [...MOCK_NOVELS].sort((a, b) => b.recommendScore - a.recommendScore).slice(0, 4);
+      const popular = [...MOCK_NOVELS].sort((a, b) => b.views - a.views);
+      const highlightCats = CATEGORIES.slice(0, 4);
+
+      return `
+        <div class="space-y-8">
+          <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 bg-white border border-gray-200 rounded p-4">
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-200">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-5 bg-amber-600 rounded-sm"></span>
+                  <h2 class="text-lg font-bold text-gray-900">編輯強推精選</h2>
+                </div>
+                <span class="text-xs text-gray-400">每日精選高口碑佳作</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${featured.map(renderBookCardHTML).join('')}
+              </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-white border border-gray-200 rounded p-4 flex flex-col">
+              <div class="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+                <div class="flex items-center gap-2">
+                  <span class="w-1.5 h-5 bg-red-600 rounded-sm"></span>
+                  <h2 class="text-lg font-bold text-gray-900">人氣風雲榜</h2>
+                </div>
+                <button onclick="navigateTo('rank')" class="text-xs text-amber-600 hover:underline cursor-pointer">完整榜單 &gt;</button>
+              </div>
+              <ul class="divide-y divide-gray-100 flex-1 flex flex-col justify-between">
+                ${popular.map((novel, idx) => {
+                  const rank = idx + 1;
+                  const badgeStyle = rank === 1 ? 'bg-red-600 text-white' : rank === 2 ? 'bg-orange-500 text-white' : rank === 3 ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-500';
+                  return `
+                    <li class="py-2.5 flex items-center justify-between gap-2 text-sm">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-5 h-5 shrink-0 rounded text-xs font-bold flex items-center justify-center ${badgeStyle}">${rank}</span>
+                        <span class="text-xs text-gray-400 shrink-0">[${novel.category.slice(0, 2)}]</span>
+                        <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="truncate hover:text-amber-600 text-left cursor-pointer ${rank <= 3 ? 'font-bold text-gray-900' : 'text-gray-700'}">
+                          ${novel.title}
+                        </button>
+                      </div>
+                      <span class="text-xs text-gray-400 shrink-0">${novel.author}</span>
+                    </li>
+                  `;
+                }).join('')}
+              </ul>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${highlightCats.map(cat => {
+              const catBooks = MOCK_NOVELS.filter(n => n.category === cat);
+              const display = catBooks.length > 0 ? catBooks : MOCK_NOVELS.slice(0, 3);
+              const top = display[0];
+              const rest = display.slice(1);
+              return `
+                <div class="bg-white border border-gray-200 rounded p-4">
+                  <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-200">
+                    <div class="flex items-center gap-2">
+                      <span class="w-1.5 h-4 bg-zinc-800 rounded-sm"></span>
+                      <h3 class="font-bold text-gray-900">${cat}</h3>
+                    </div>
+                    <button onclick="navigateTo('category', { selectedCategory: '${cat}' })" class="text-xs text-gray-500 hover:text-amber-600 cursor-pointer">更多 &gt;</button>
+                  </div>
+                  <div class="flex gap-3 pb-3 mb-2 border-b border-dashed border-gray-200">
+                    <button onclick="navigateTo('book', { bookId: '${top.id}' })" class="w-16 h-20 shrink-0 bg-zinc-800 text-white rounded flex items-center justify-center text-[11px] text-center p-1 cursor-pointer">
+                      ${top.category}
+                    </button>
+                    <div class="min-w-0 flex-1">
+                      <button onclick="navigateTo('book', { bookId: '${top.id}' })" class="font-bold text-sm text-gray-900 hover:text-amber-600 block truncate text-left w-full cursor-pointer">${top.title}</button>
+                      <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${top.description}</p>
+                      <div class="text-[11px] text-gray-400 mt-1.5 flex items-center justify-between">
+                        <span>作者：${top.author}</span>
+                        <span class="text-amber-600 font-medium">${top.recommendScore} 分</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ul class="space-y-2 text-sm">
+                    ${rest.map(b => `
+                      <li class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <span class="text-amber-600 text-xs">▪</span>
+                          <button onclick="navigateTo('book', { bookId: '${b.id}' })" class="text-gray-800 hover:text-amber-600 truncate text-left cursor-pointer">${b.title}</button>
+                        </div>
+                        <span class="text-xs text-gray-400 shrink-0">${b.author}</span>
+                      </li>
+                    `).join('')}
+                  </ul>
+                </div>
+              `;
+            }).join('')}
+          </section>
+
+          <section class="bg-white border border-gray-200 rounded p-4">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-gray-200">
+              <div class="flex items-center gap-2">
+                <span class="w-1.5 h-5 bg-emerald-600 rounded-sm"></span>
+                <h2 class="text-lg font-bold text-gray-900">最新章節更新</h2>
+              </div>
+              <span class="text-xs text-gray-400">即時同步全站連載進度</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-gray-200 text-xs text-gray-500 bg-gray-50">
+                    <th class="py-2.5 px-3 font-medium w-24">分類</th>
+                    <th class="py-2.5 px-3 font-medium">書名</th>
+                    <th class="py-2.5 px-3 font-medium">最新章節</th>
+                    <th class="py-2.5 px-3 font-medium w-28">作者</th>
+                    <th class="py-2.5 px-3 font-medium w-24 hidden sm:table-cell">狀態</th>
+                    <th class="py-2.5 px-3 font-medium w-28 text-right">更新時間</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  ${MOCK_NOVELS.map(novel => `
+                    <tr class="hover:bg-amber-50/40 transition-colors">
+                      <td class="py-2.5 px-3 text-xs text-gray-500">[${novel.category}]</td>
+                      <td class="py-2.5 px-3 font-medium">
+                        <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="text-gray-900 hover:text-amber-600 text-left cursor-pointer">${novel.title}</button>
+                      </td>
+                      <td class="py-2.5 px-3">
+                        <button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${novel.latestChapter.index} })" class="text-gray-600 hover:text-amber-600 text-xs sm:text-sm text-left cursor-pointer">${novel.latestChapter.title}</button>
+                      </td>
+                      <td class="py-2.5 px-3 text-xs text-gray-500">${novel.author}</td>
+                      <td class="py-2.5 px-3 text-xs hidden sm:table-cell">
+                        <span class="${novel.status === 'completed' ? 'text-orange-600' : 'text-emerald-600'}">
+                          ${novel.status === 'completed' ? '已完結' : '連載中'}
+                        </span>
+                      </td>
+                      <td class="py-2.5 px-3 text-xs text-gray-400 text-right">${novel.updatedAt}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderFilteredListView(title, subtitle, novels) {
+      return `
+        <div class="bg-white border border-gray-200 rounded p-5 space-y-5">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+            <div class="flex items-center gap-2">
+              <span class="w-1.5 h-5 bg-amber-600 rounded-sm"></span>
+              <h1 class="text-xl font-bold text-gray-900">${title}</h1>
+              <span class="text-xs text-gray-400 ml-2">${subtitle}</span>
+            </div>
+            <button onclick="navigateTo('home')" class="text-xs text-gray-500 hover:text-amber-600 cursor-pointer">← 返回首頁</button>
+          </div>
+          ${novels.length === 0
+            ? `<div class="py-12 text-center text-gray-400 text-sm">目前沒有符合條件的小說資料。</div>`
+            : `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">${novels.map(renderBookCardHTML).join('')}</div>`
+          }
+        </div>
+      `;
+    }
+
+    function renderBookDetailView() {
+      const novel = MOCK_NOVELS.find(n => n.id === state.bookId) || MOCK_NOVELS[0];
+      const isCompleted = novel.status === 'completed';
+      const inShelf = state.bookshelf.includes(novel.id);
+
+      const totalDisplay = 30;
+      const startIdx = Math.max(1, novel.latestChapter.index - totalDisplay + 1);
+      const chapters = [];
+      for (let i = startIdx; i < novel.latestChapter.index; i++) {
+        chapters.push({ index: i, title: `第${i}章 風起雲湧的徵兆（測試章節）` });
+      }
+      chapters.push({ index: novel.latestChapter.index, title: novel.latestChapter.title });
+
+      const displayedChapters = state.catalogReversed ? [...chapters].reverse() : chapters;
+
+      return `
+        <div class="space-y-6">
+          <nav class="text-xs text-gray-500 flex items-center gap-1.5">
+            <button onclick="navigateTo('home')" class="hover:text-amber-600 cursor-pointer">首頁</button>
+            <span>/</span>
+            <button onclick="navigateTo('category', { selectedCategory: '${novel.category}' })" class="hover:text-amber-600 cursor-pointer">${novel.category}</button>
+            <span>/</span>
+            <span class="text-gray-800 font-medium">${novel.title}</span>
+          </nav>
+
+          <section class="bg-white border border-gray-200 rounded p-5 sm:p-6">
+            <div class="flex flex-col sm:flex-row gap-6">
+              <div class="w-36 h-48 sm:w-44 sm:h-60 shrink-0 mx-auto sm:mx-0 bg-gradient-to-br from-zinc-700 to-zinc-900 text-white rounded shadow-sm border border-gray-200 flex flex-col items-center justify-center p-4 text-center">
+                <span class="text-xs text-amber-400 tracking-widest mb-2">${novel.category}</span>
+                <p class="font-bold text-base leading-snug line-clamp-3">${novel.title}</p>
+                <span class="text-[11px] text-zinc-400 mt-3">${novel.author} 著</span>
+              </div>
+
+              <div class="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2.5">
+                    <h1 class="text-2xl font-bold text-gray-900">${novel.title}</h1>
+                    <span class="text-xs px-2 py-0.5 rounded font-medium ${isCompleted ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}">
+                      ${isCompleted ? '已完結' : '連載中'}
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-gray-600 mt-3 pb-3 border-b border-gray-100">
+                    <span>作者：<strong class="font-medium text-gray-900">${novel.author}</strong></span>
+                    <span>分類：${novel.category}</span>
+                    <span>字數：${(novel.wordCount / 10000).toFixed(1)} 萬字</span>
+                    <span>人氣：${(novel.views / 10000).toFixed(1)} 萬次點擊</span>
+                    <span>編輯推薦：<strong class="text-amber-600 font-bold">${novel.recommendScore} 分</strong></span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <span class="text-xs text-gray-400">作品標籤：</span>
+                    ${novel.tags.map(t => `
+                      <button onclick="navigateTo('search', { searchQuery: '${t}' })" class="text-xs px-2.5 py-1 bg-gray-100 hover:bg-amber-50 text-gray-600 hover:text-amber-700 rounded transition-colors cursor-pointer">#${t}</button>
+                    `).join('')}
+                  </div>
+
+                  <div class="mt-3 text-xs sm:text-sm bg-gray-50 px-3 py-2 rounded border border-gray-100 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="text-gray-400 shrink-0">最新章節：</span>
+                      <button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${novel.latestChapter.index} })" class="text-amber-700 hover:underline font-medium truncate cursor-pointer">
+                        ${novel.latestChapter.title}
+                      </button>
+                    </div>
+                    <span class="text-xs text-gray-400 shrink-0">更新時間：${novel.updatedAt}</span>
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 pt-4">
+                  <button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${startIdx} })" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-medium text-sm rounded transition-colors cursor-pointer">
+                    開始閱讀
+                  </button>
+                  <button onclick="toggleBookshelf('${novel.id}')" class="px-5 py-2.5 text-sm font-medium rounded border transition-colors cursor-pointer ${
+                    inShelf ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-gray-300 text-gray-700 hover:border-amber-500 hover:text-amber-600'
+                  }">
+                    ${inShelf ? '✓ 已在書架中' : '+ 加入書架'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-200">
+              <h2 class="text-sm font-bold text-gray-900 mb-2">內容簡介</h2>
+              <p class="text-sm text-gray-700 leading-7">${novel.description}</p>
+            </div>
+          </section>
+
+          <section class="bg-white border border-gray-200 rounded p-5">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-gray-200">
+              <div class="flex items-center gap-2">
+                <span class="w-1.5 h-5 bg-amber-600 rounded-sm"></span>
+                <h2 class="text-lg font-bold text-gray-900">章節目錄 <span class="text-xs font-normal text-gray-400 ml-1">(顯示最近 ${chapters.length} 章)</span></h2>
+              </div>
+              <button onclick="state.catalogReversed = !state.catalogReversed; renderApp();" class="text-xs px-3 py-1.5 rounded border border-gray-200 bg-gray-50 hover:bg-amber-50 hover:text-amber-700 text-gray-600 cursor-pointer">
+                ${state.catalogReversed ? '↑ 目前：倒序（最新在前）' : '↓ 目前：正序（從頭開始）'}
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6">
+              ${displayedChapters.map(ch => `
+                <button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${ch.index} })" class="py-2.5 px-2 text-sm text-left text-gray-700 hover:text-amber-600 hover:bg-amber-50/50 border-b border-gray-100 truncate transition-colors cursor-pointer">
+                  ${ch.title}
+                </button>
+              `).join('')}
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderReaderView() {
+      const novel = MOCK_NOVELS.find(n => n.id === state.bookId) || MOCK_NOVELS[0];
+      const idx = state.chapterIndex;
+      const isLatest = idx === novel.latestChapter.index;
+      const chapterTitle = isLatest ? novel.latestChapter.title : `第${idx}章 風起雲湧的徵兆（測試章節）`;
+
+      const themes = {
+        light: { wrapper: 'bg-gray-100', paper: 'bg-white shadow-sm', text: 'text-gray-900', muted: 'text-gray-500', border: 'border-gray-200', btn: 'bg-white hover:bg-amber-50 text-gray-700 border-gray-300' },
+        sepia: { wrapper: 'bg-[#e8e0cf]', paper: 'bg-[#f6f1e7] shadow-sm', text: 'text-[#3b3224]', muted: 'text-[#7a6d59]', border: 'border-[#dfd5c0]', btn: 'bg-[#efe8d8] hover:bg-[#e5dcc7] text-[#3b3224] border-[#d3c7b0]' },
+        dark:  { wrapper: 'bg-zinc-950', paper: 'bg-zinc-900 shadow-sm', text: 'text-zinc-300', muted: 'text-zinc-500', border: 'border-zinc-800', btn: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700' }
+      };
+      const st = themes[state.readerTheme] || themes.sepia;
+
+      const paragraphs = [
+        '夜色如墨，冷風吹過青石板鋪就的長街，捲起幾片枯黃的落葉。',
+        '主角站在閣樓窗前，望著遠處天際那道若隱若現的金色光柱，眉頭微微皺起。自從三天前覺醒儀式結束後，整座城市的靈氣濃度便以一種不可思議的速度攀升。',
+        '「看來，比預想中來得還要快一些。」他低聲自語，指尖輕輕摩挲著袖口內側那枚溫熱的古樸玉佩。',
+        '就在剛才，腦海中的系統再次發出了清脆的提示音，一道淡藍色的光幕隨即在視網膜上展開，上面密密麻麻記錄著周圍方圓十里內的所有氣息波動。',
+        '若是一般的初階修行者，面對如此龐雜的精神力反饋，恐怕不出半刻鐘就會頭痛欲裂；但憑藉著兩世為人的靈魂強度，他卻顯得游刃有餘，甚至還能從中精準鎖定那道最為隱晦的波動源頭。',
+        `（本章為《${novel.title}》第 ${idx} 章預覽正文，正式上線後將串接資料庫顯示完整章節內容。）`
+      ];
+
+      return `
+        <div class="min-h-[calc(100vh-8rem)] -mx-4 -my-6 px-4 py-6 transition-colors duration-200 ${st.wrapper}">
+          <div class="max-w-3xl mx-auto space-y-4">
+            <div class="p-3.5 rounded border flex flex-wrap items-center justify-between gap-3 ${st.paper} ${st.border}">
+              <div class="text-xs flex items-center gap-1.5 ${st.muted}">
+                <button onclick="navigateTo('home')" class="hover:text-amber-600 cursor-pointer">首頁</button>
+                <span>/</span>
+                <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="hover:text-amber-600 cursor-pointer">${novel.title}</button>
+                <span>/</span>
+                <span class="truncate max-w-[150px] sm:max-w-xs">${chapterTitle}</span>
+              </div>
+
+              <div class="flex items-center gap-4 text-xs">
+                <div class="flex items-center gap-1.5">
+                  <span class="${st.muted}">背景：</span>
+                  <button onclick="setReaderTheme('light')" title="日間純白" class="w-5 h-5 rounded-full bg-white border cursor-pointer ${state.readerTheme === 'light' ? 'ring-2 ring-amber-500 border-amber-500' : 'border-gray-300'}"></button>
+                  <button onclick="setReaderTheme('sepia')" title="護眼羊皮紙" class="w-5 h-5 rounded-full bg-[#f6f1e7] border cursor-pointer ${state.readerTheme === 'sepia' ? 'ring-2 ring-amber-500 border-amber-500' : 'border-[#c8bca4]'}"></button>
+                  <button onclick="setReaderTheme('dark')" title="夜間深黑" class="w-5 h-5 rounded-full bg-zinc-900 border cursor-pointer ${state.readerTheme === 'dark' ? 'ring-2 ring-amber-500 border-amber-500' : 'border-zinc-600'}"></button>
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <span class="${st.muted}">字級：</span>
+                  <button onclick="changeFontSize(-2)" class="px-2 py-0.5 rounded border cursor-pointer ${st.btn}">A-</button>
+                  <span class="px-1.5 font-mono ${st.text}">${state.readerFontSize}</span>
+                  <button onclick="changeFontSize(2)" class="px-2 py-0.5 rounded border cursor-pointer ${st.btn}">A+</button>
+                </div>
+              </div>
+            </div>
+
+            <article class="px-6 py-8 sm:px-12 sm:py-10 rounded border transition-colors duration-200 ${st.paper} ${st.border}">
+              <header class="pb-5 mb-6 border-b text-center ${st.border}">
+                <h1 class="text-xl sm:text-2xl font-bold tracking-wide ${st.text}">${chapterTitle}</h1>
+                <div class="flex items-center justify-center gap-4 text-xs mt-2.5 ${st.muted}">
+                  <span>書名：${novel.title}</span>
+                  <span>作者：${novel.author}</span>
+                </div>
+              </header>
+              <div style="font-size: ${state.readerFontSize}px;" class="space-y-5 leading-[1.9] tracking-wide ${st.text}">
+                ${paragraphs.map(p => `<p class="indent-8">${p}</p>`).join('')}
+              </div>
+            </article>
+
+            <div class="p-4 rounded border flex items-center justify-between gap-2 text-sm ${st.paper} ${st.border}">
+              ${idx > 1
+                ? `<button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${idx - 1} })" class="flex-1 text-center py-2.5 rounded border font-medium cursor-pointer ${st.btn}">← 上一章</button>`
+                : `<span class="flex-1 text-center py-2.5 rounded border opacity-40 ${st.btn}">已是第一章</span>`
+              }
+              <button onclick="navigateTo('book', { bookId: '${novel.id}' })" class="flex-1 text-center py-2.5 rounded border font-medium cursor-pointer ${st.btn}">返回目錄</button>
+              ${idx < novel.latestChapter.index
+                ? `<button onclick="navigateTo('reader', { bookId: '${novel.id}', chapterIndex: ${idx + 1} })" class="flex-1 text-center py-2.5 rounded border font-medium cursor-pointer ${st.btn}">下一章 →</button>`
+                : `<span class="flex-1 text-center py-2.5 rounded border opacity-40 ${st.btn}">已是最新章</span>`
+              }
+            </div>
+            <p class="text-center text-xs hidden sm:block ${st.muted}">提示：可使用鍵盤「←」與「→」方向鍵快速切換上一章 / 下一章</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function setReaderTheme(theme) {
+      state.readerTheme = theme;
+      safeSetStorage('reader_theme', theme);
+      renderApp();
+    }
+
+    function changeFontSize(delta) {
+      state.readerFontSize = Math.min(26, Math.max(14, state.readerFontSize + delta));
+      safeSetStorage('reader_font_size', String(state.readerFontSize));
+      renderApp();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (state.view !== 'reader' || e.target.tagName === 'INPUT') return;
+      const novel = MOCK_NOVELS.find(n => n.id === state.bookId);
+      if (!novel) return;
+      if (e.key === 'ArrowLeft' && state.chapterIndex > 1) {
+        navigateTo('reader', { bookId: novel.id, chapterIndex: state.chapterIndex - 1 });
+      } else if (e.key === 'ArrowRight' && state.chapterIndex < novel.latestChapter.index) {
+        navigateTo('reader', { bookId: novel.id, chapterIndex: state.chapterIndex + 1 });
+      }
+    });
+
+    function renderApp() {
+      const main = document.getElementById('appMain');
+      switch (state.view) {
+        case 'category': {
+          const list = MOCK_NOVELS.filter(n => n.category === state.selectedCategory);
+          main.innerHTML = renderFilteredListView(`分類：${state.selectedCategory}`, `共 ${list.length} 部作品`, list);
+          break;
+        }
+        case 'search': {
+          const q = state.searchQuery.toLowerCase();
+          const list = MOCK_NOVELS.filter(n =>
+            n.title.toLowerCase().includes(q) ||
+            n.author.toLowerCase().includes(q) ||
+            n.tags.some(t => t.toLowerCase().includes(q))
+          );
+          main.innerHTML = renderFilteredListView(`搜尋結果：「${state.searchQuery}」`, `找到 ${list.length} 筆相關作品`, list);
+          break;
+        }
+        case 'rank': {
+          const list = [...MOCK_NOVELS].sort((a, b) => b.views - a.views);
+          main.innerHTML = renderFilteredListView('全站人氣風雲榜', '依全站總點擊人氣排行', list);
+          break;
+        }
+        case 'completed': {
+          const list = MOCK_NOVELS.filter(n => n.status === 'completed');
+          main.innerHTML = renderFilteredListView('全本完本精選', '已完結高口碑小說，一次看到底', list);
+          break;
+        }
+        case 'bookshelf': {
+          const list = MOCK_NOVELS.filter(n => state.bookshelf.includes(n.id));
+          main.innerHTML = renderFilteredListView('我的書架', `已收藏 ${list.length} 本小說`, list);
+          break;
+        }
+        case 'book':
+          main.innerHTML = renderBookDetailView();
+          break;
+        case 'reader':
+          main.innerHTML = renderReaderView();
+          break;
+        default:
+          main.innerHTML = renderHomeView();
+      }
+    }
+
+    renderNavbar();
+    renderApp();
+  </script>
+</body>
+</html>
